@@ -1,80 +1,205 @@
-# TwigDock / 枝坞
+# TwigDock
 
-TwigDock（枝坞）是一个中文原生 macOS 开发者工具，把本机监听端口、对应进程、Git 仓库与 Worktree 放在同一个界面里管理。
+> A native macOS control center for local ports, processes, Git repositories, and Worktrees.
 
-## 功能
+[English](README.md) | [简体中文](README.zh-CN.md)
 
-- 总览：按仓库聚合附加 Worktree，并显示主目录与各工作树启动的端口。
-- 项目排序：总览仓库卡片支持拖动、置顶、上移和下移，顺序会持久保存。
-- 显示名称：可为仓库增加本地备注，例如 `attendance（日常考勤）`，并同步显示在端口与 Worktree 页面。
-- 端口管理：扫描 TCP 监听和 UDP 端点，展示进程、PID、命令、运行目录与项目关联。
-- 进程操作：浏览器打开、复制地址、打开终端，以及通过 `SIGTERM` 安全停止进程。
-- Worktree 管理：查看脏状态、ahead/behind、上游与最近提交。
-- 新建 Worktree：选择仓库和基准分支，可复制常用 `.env` 文件。
-- 移除 Worktree：可复制分支名，并用高亮选项确认停止关联进程、强制移除或删除本地分支。
-- 首次配置：首次启动必须由用户选择代码目录，选择前不会执行任何扫描。
-- 自动刷新：完成目录配置后，端口每 5 秒刷新一次，仓库数据可手动刷新。
-- 菜单栏速览：点击状态栏图标可在独立页签中查看项目端口和附加 Worktree；系统端口不会出现在浮层中。
-- 原生体验：SwiftUI、浅色/深色模式、无第三方依赖。
+TwigDock (枝坞) brings the local development state that is usually scattered across `lsof`, `ps`, terminal tabs, and Git commands into one focused macOS app. It shows which processes own local ports, links them back to scanned repositories and Worktrees, and provides guarded actions for common cleanup tasks.
 
-## 系统要求
+## Highlights
 
-- macOS 13 或更高版本
-- Git 与系统自带的 `lsof`
-- 从源码构建需要 Swift 5.10 或完整 Xcode
+- **Project overview** — groups additional Worktrees and project-owned ports by repository.
+- **Port inspection** — shows TCP listeners and UDP endpoints with process name, PID, command, address, and working directory.
+- **Project association** — links a process to a repository or Worktree by inspecting its current working directory.
+- **Safe process control** — opens local services in a browser, copies addresses, opens Terminal, and sends `SIGTERM` when stopping a process.
+- **Worktree management** — shows branch, path, dirty state, upstream, ahead/behind state, and recent activity.
+- **Create and remove Worktrees** — includes explicit confirmation for destructive or dirty-worktree operations.
+- **Repository aliases and ordering** — keeps frequently used projects at the top and supports local display names such as `attendance (Daily Attendance)`.
+- **Menu bar overview** — provides compact, independently scrollable pages for project ports and additional Worktrees.
+- **Explicit first-run setup** — TwigDock never guesses a scan directory; the user must choose one before scanning begins.
+- **Native and local** — built with SwiftUI, supports light and dark appearance, and has no third-party runtime dependencies.
 
-## 运行
+## Download
 
-开发模式：
+Download the newest build from [GitHub Releases](https://github.com/Rudy-Ran/TwigDock/releases/latest):
+
+- **Application:** [`TwigDock-macOS-arm64.zip`](https://github.com/Rudy-Ran/TwigDock/releases/latest/download/TwigDock-macOS-arm64.zip)
+- **Checksum:** [`TwigDock-macOS-arm64.zip.sha256`](https://github.com/Rudy-Ran/TwigDock/releases/latest/download/TwigDock-macOS-arm64.zip.sha256)
+
+Do not download GitHub's automatically generated **Source code** archives unless you intend to build TwigDock yourself. The runnable app is the asset named `TwigDock-macOS-arm64.zip`.
+
+The repository and its Releases are public, so the application can be downloaded without repository access.
+
+## Install
+
+Current prebuilt releases require:
+
+- Apple Silicon Mac (`arm64`, M1 or newer)
+- macOS 13 Ventura or newer
+- Git
+- The system-provided `lsof`
+
+Installation steps:
+
+1. Open the [latest release](https://github.com/Rudy-Ran/TwigDock/releases/latest).
+2. Expand **Assets** and download `TwigDock-macOS-arm64.zip`.
+3. Double-click the ZIP file to extract `TwigDock.app`.
+4. Drag `TwigDock.app` into `/Applications`.
+5. Open TwigDock and choose the parent directory that contains the repositories you want it to scan.
+
+### First launch and Gatekeeper
+
+The current preview build is ad-hoc signed and **not notarized by Apple**. macOS may therefore block a normal double-click on first launch.
+
+Use the standard macOS flow:
+
+1. In Finder, Control-click `TwigDock.app` and choose **Open**.
+2. Confirm **Open** in the dialog, if offered.
+3. If macOS still blocks the app, open **System Settings → Privacy & Security**, find the TwigDock notice, and choose **Open Anyway**.
+
+Do not disable Gatekeeper globally. See Apple's guide: [Safely open apps on your Mac](https://support.apple.com/en-ca/102445).
+
+For a frictionless public release, the app should later be signed with an Apple Developer ID and notarized. See [Apple Developer ID](https://developer.apple.com/support/developer-id/).
+
+## First-run setup
+
+TwigDock intentionally starts without scanning anything.
+
+1. Choose a code directory, for example `~/Developer` or `~/Desktop/Code`.
+2. TwigDock searches for Git repositories up to four directory levels below that root.
+3. Build folders such as `node_modules`, `DerivedData`, and `dist` are skipped.
+4. The chosen directory, repository order, and aliases are stored locally.
+
+You can change the scan directory later from the bottom of the sidebar.
+
+## How port association works
+
+TwigDock reads local endpoint and process information with macOS system tools, then compares each process's current working directory with discovered repository and Worktree paths.
+
+- A process running inside a main repository directory is shown under that project.
+- A process running inside an additional Worktree is linked to that Worktree.
+- If the working directory cannot be read or does not belong to a scanned repository, the endpoint remains unassociated.
+- Only project-associated ports appear in the menu bar's project-port page.
+
+Port data refreshes every five seconds after a scan directory has been configured. Repository and Worktree data refreshes manually and after mutations.
+
+## Worktree behavior and safety
+
+- The repository's main working directory is used as project context but is not counted as an additional Worktree.
+- The main working directory cannot be removed from TwigDock.
+- Removing a Worktree deletes its working directory, not repository commits.
+- Deleting a local branch is optional and never deletes its remote branch.
+- A dirty Worktree requires force removal and an exact branch-name confirmation.
+- Associated listening processes can be stopped before removal.
+- Process stopping sends `SIGTERM`; TwigDock does not use `SIGKILL` or request elevated privileges.
+- TwigDock refuses to stop its own process.
+
+## Updating
+
+1. Quit TwigDock from its menu bar panel or with `Command-Q`.
+2. Download the newest release asset.
+3. Replace the existing `/Applications/TwigDock.app` with the new version.
+4. Reopen the app.
+
+The scan directory, repository order, and aliases are stored separately from the application bundle and are retained during replacement.
+
+## Build from source
+
+Requirements:
+
+- Swift 5.10 or newer
+- macOS 13 SDK or newer
+- Full Xcode is recommended for XCTest support
+
+Clone and run:
 
 ```bash
+git clone https://github.com/Rudy-Ran/TwigDock.git
+cd TwigDock
 swift run TwigDock
 ```
 
-生成可双击运行的 `.app`：
+Create a double-clickable application bundle:
 
 ```bash
 ./scripts/package-app.sh
 open dist/TwigDock.app
 ```
 
-打包脚本会执行 Release 构建、生成应用图标并进行本机 ad-hoc 签名。产物位于 `dist/TwigDock.app`。
+The packaging script performs a release build, generates the app icon, creates `dist/TwigDock.app`, and applies a local ad-hoc signature. It does not perform Developer ID signing or notarization.
 
-## 验证
+## Verification
 
-有完整 Xcode 时可运行：
+Run strict compilation and the portable verification suite:
+
+```bash
+swift build -Xswiftc -warnings-as-errors
+./scripts/verify.sh
+```
+
+With a full Xcode installation, also run:
 
 ```bash
 swift test
 ```
 
-只有 Apple Command Line Tools、没有 XCTest 时，可运行核心解析与临时 Git 仓库集成验证：
+The portable verification suite covers parser behavior and Worktree operations against temporary Git repositories. XCTest provides additional regression coverage for model presentation, port behavior, menu bar filtering, and preference migration.
 
-```bash
-./scripts/verify.sh
-```
+## Privacy and permissions
 
-## 工作方式与安全边界
+- TwigDock has no account system and no analytics or telemetry.
+- Project configuration stays in local macOS preferences.
+- The app does not upload repository contents.
+- The app is not sandboxed because it needs to inspect local processes and Git repositories selected by the user.
+- Browser actions only open local service URLs chosen by the user.
 
-- 扫描目录必须由用户首次选择，可在左下角更改并持久保存；应用不会猜测默认目录。
-- 仓库主目录只用于端口归属和创建基准，不计入 Worktree 数量或管理列表。
-- 仓库发现最多向下扫描 4 层，并跳过 `node_modules`、`DerivedData`、`dist` 等构建目录。
-- 端口与 Worktree 的关联依据进程当前工作目录；无法读取工作目录时显示为“未关联”。
-- 停止进程只发送 `SIGTERM`，不会使用 `SIGKILL`，也不会尝试提升权限。
-- TwigDock 会拒绝停止自身；进程已经退出时按成功处理。
-- 主工作树受保护，不能从 TwigDock 中移除。
-- 删除含未提交改动的 Worktree 必须开启强制移除并输入完整分支名。
-- 应用未启用 App Sandbox，因为它需要读取本机进程、仓库以及用户选择的目录。
+## Troubleshooting
 
-## 项目结构
+### A repository is missing
+
+- Confirm it is inside the configured scan root.
+- Repositories deeper than four levels are not discovered.
+- Confirm the directory contains valid Git metadata.
+- Use **Refresh All** after moving repositories.
+
+### A port is shown as unassociated
+
+- Confirm the process was launched from inside the repository or Worktree.
+- Some system or protected processes do not expose a readable working directory.
+- Confirm the repository is under the configured scan root.
+
+### The menu bar icon is not visible
+
+- macOS can hide status items when the menu bar is crowded or when a display notch reduces available space.
+- Hide another menu bar item temporarily and relaunch TwigDock.
+- Check whether a menu bar organizer such as Bartender or Ice is hiding the item.
+
+### The app cannot be opened after downloading
+
+The current preview is not notarized. Follow the [First launch and Gatekeeper](#first-launch-and-gatekeeper) steps above. Do not disable macOS security globally.
+
+## Project structure
 
 ```text
 Sources/TwigDock/
-  AppModel.swift              界面状态与操作编排
-  PortService.swift           lsof / ps 扫描与进程停止
-  GitWorktreeService.swift    仓库发现与 Worktree 操作
-  Views/MenuBarView.swift     菜单栏项目端口与工作树速览
-  Views/                      中文 SwiftUI 界面
-Tests/TwigDockTests/          XCTest 解析回归测试
-scripts/                      验证、图标生成与 .app 打包
+  TwigDockApp.swift           Application and menu bar scenes
+  AppModel.swift              UI state, persistence, and operation orchestration
+  Models.swift                Domain and presentation models
+  PortService.swift           lsof / ps scanning and process termination
+  GitWorktreeService.swift    Repository discovery and Worktree operations
+  Views/                      Native Chinese SwiftUI interface
+Tests/TwigDockTests/          XCTest regression coverage
+Resources/Info.plist          Application bundle metadata
+scripts/                      Verification, icon generation, and packaging
 ```
+
+## Current release limitations
+
+- The prebuilt binary is Apple Silicon only.
+- The preview build is ad-hoc signed and not notarized.
+- There is no automatic updater yet.
+- A software license has not yet been added to the repository.
+
+## Name
+
+`Twig` represents a lightweight Git branch or Worktree. `Dock` represents a place where local ports and development contexts can be gathered, while also nodding to macOS.
